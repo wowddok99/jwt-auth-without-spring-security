@@ -1,0 +1,71 @@
+package com.example.jwt_auth.common.jpa;
+
+import com.example.jwt_auth.auth.entity.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Jwts.SIG;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.*;
+
+@Component
+public class JwtUtil {
+    private final SecretKey secretKey;
+
+    @Value("${jwt.access-token-expiration}")
+    private Long accessExpiration;
+
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8),
+                SIG.HS256.key().build().getAlgorithm());
+    }
+
+    public String createAccessToken(User user) {
+        long refreshExpirationInMillis = accessExpiration * 1000; // 초를 밀리초로 변환
+
+        return Jwts.builder()
+                .issuer("backend-spring-project") // JWT 발급자 정보
+                .subject(user.getUsername()) // JWT 주제 설정
+                .audience().add("frontend-next-project").and() // JWT 수신 대상
+                .issuedAt(new Date(System.currentTimeMillis())) // JWT 발급 시간
+                .expiration(new Date(System.currentTimeMillis() + refreshExpirationInMillis)) // JWT 만료 시간
+                .id(UUID.randomUUID().toString()) // JWT 고유 ID (UUID Random)
+                .signWith(secretKey) // 시크릿 키를 사용하여 JWT 토큰에 서명
+                .compact();
+    }
+
+    public String createRefreshToken(User user) {
+        // 랜덤 바이트 생성을 위해 SecureRandom 사용
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] randomBytes = new byte[32]; // 256 bits (32 bytes)
+        secureRandom.nextBytes(randomBytes);
+
+        // 생성된 랜덤 바이트를 Base64로 인코딩하여 문자열로 변환
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    public boolean isValidRefreshToken(String refreshToken) {
+        try {
+            // 주어진 리프레시 토큰에서 클레임을 추출하여 유효성을 검증합니다.
+            // 클레임을 성공적으로 가져온 경우, 토큰이 유효함
+            getClaimsToken(refreshToken);
+            return true;
+        } catch (NullPointerException | JwtException e) {
+            return false;
+        }
+    }
+
+    private Claims getClaimsToken(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey) // 비밀 키로 토큰 검증 설정
+                .build()
+                .parseSignedClaims(token)// 서명된 클레임을 파싱
+                .getPayload(); // 클레임의 페이로드 반환
+    }
+}
