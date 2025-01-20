@@ -49,23 +49,4 @@ public class JwtUtil {
         // 생성된 랜덤 바이트를 Base64로 인코딩하여 문자열로 변환
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
     }
-
-    public boolean isValidRefreshToken(String refreshToken) {
-        try {
-            // 주어진 리프레시 토큰에서 클레임을 추출하여 유효성을 검증합니다.
-            // 클레임을 성공적으로 가져온 경우, 토큰이 유효함
-            getClaimsToken(refreshToken);
-            return true;
-        } catch (NullPointerException | JwtException e) {
-            return false;
-        }
-    }
-
-    private Claims getClaimsToken(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey) // 비밀 키로 토큰 검증 설정
-                .build()
-                .parseSignedClaims(token)// 서명된 클레임을 파싱
-                .getPayload(); // 클레임의 페이로드 반환
-    }
 }
