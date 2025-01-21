@@ -2,6 +2,7 @@ package com.example.jwt_auth.common.jpa;
 
 import com.example.jwt_auth.auth.entity.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Jwts.SIG;
@@ -48,5 +49,27 @@ public class JwtUtil {
 
         // 생성된 랜덤 바이트를 Base64로 인코딩하여 문자열로 변환
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    public String getUsernameFromToken(String token) {
+        // JWT를 파싱하여 클레임을 가져옴
+        Jws<Claims> claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token);
+
+        return claims.getPayload().getSubject(); // 주제(사용자 이름) 반환
+    }
+
+    private boolean isTokenValid(String token) {
+        // JWT를 파싱하여 클레임을 가져옴
+        Jws<Claims> claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token);
+
+        // 만료 시간(ex: 2025-01-21 18:30:00)이 현재 시간(ex: 2025-01-21 18:00:00) 이후면 -> true
+        // 만료 시간(ex: 2025-01-21 18:00:00)이 현재 시간(ex: 2025-01-21 18:30:00) 이전이면 -> false
+        return claims.getPayload().getExpiration().after(new Date());
     }
 }
