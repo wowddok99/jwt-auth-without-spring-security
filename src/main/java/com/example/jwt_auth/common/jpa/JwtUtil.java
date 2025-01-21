@@ -30,9 +30,9 @@ public class JwtUtil {
         long refreshExpirationInMillis = accessExpiration * 1000; // 초를 밀리초로 변환
 
         return Jwts.builder()
-                .issuer("backend-spring-project") // JWT 발급자 정보
+                .issuer("backend") // JWT 발급자 정보
+                .audience().add("frontend").and() // JWT 수신 대상
                 .subject(user.getUsername()) // JWT 주제 설정
-                .audience().add("frontend-next-project").and() // JWT 수신 대상
                 .issuedAt(new Date(System.currentTimeMillis())) // JWT 발급 시간
                 .expiration(new Date(System.currentTimeMillis() + refreshExpirationInMillis)) // JWT 만료 시간
                 .id(UUID.randomUUID().toString()) // JWT 고유 ID (UUID Random)
