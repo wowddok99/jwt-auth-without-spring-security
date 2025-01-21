@@ -3,7 +3,6 @@ package com.example.jwt_auth.common.jpa;
 import com.example.jwt_auth.auth.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Jwts.SIG;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,7 +60,7 @@ public class JwtUtil {
         return claims.getPayload().getSubject(); // 주제(사용자 이름) 반환
     }
 
-    private boolean isTokenValid(String token) {
+    public boolean isTokenValid(String token) {
         // JWT를 파싱하여 클레임을 가져옴
         Jws<Claims> claims = Jwts.parser()
                 .verifyWith(secretKey)
