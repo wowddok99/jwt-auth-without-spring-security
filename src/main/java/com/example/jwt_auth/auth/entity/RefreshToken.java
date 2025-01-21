@@ -9,7 +9,6 @@ import lombok.*;
 @NoArgsConstructor
 @Entity
 public class RefreshToken {
-
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Id
     private Long id;
