@@ -1,4 +1,4 @@
-package com.example.jwt_auth.common.jpa;
+package com.example.jwt_auth.common.jwt;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

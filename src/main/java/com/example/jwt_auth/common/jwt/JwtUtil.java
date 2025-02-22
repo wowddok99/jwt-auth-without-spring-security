@@ -1,4 +1,4 @@
-package com.example.jwt_auth.common.jpa;
+package com.example.jwt_auth.common.jwt;
 
 import com.example.jwt_auth.auth.entity.User;
 import io.jsonwebtoken.Claims;

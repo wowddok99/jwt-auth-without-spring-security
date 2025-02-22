@@ -39,13 +39,14 @@ public class AuthApi {
         TokenResponse tokenResponse = authService.signIn(request);
 
         // 리프레시 토큰을 쿠키에 저장
-        Cookie cookie = createCookie(tokenResponse.refreshToken()); // 리프레시 토큰을 쿠키로 생성
-        response.addCookie(cookie); // 응답에 쿠키 추가
+        Cookie cookie = createCookie(tokenResponse.refreshToken());
+        // 응답에 쿠키 추가
+        response.addCookie(cookie);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(TokenResponse.builder()
-                        .accessToken(tokenResponse.accessToken()) // 액세스 토큰 설정
+                        .accessToken(tokenResponse.accessToken())
                         .build());
     }
 
@@ -54,13 +55,16 @@ public class AuthApi {
         // 리프레시 토큰이 DB에 존재하는지 확인하고, 존재할 경우 새로운 액세스 토큰과 리프레시 토큰을 생성
         TokenResponse tokenResponse = authService.reissueRefreshToken(token);
 
-        // 리프레시 토큰을 쿠키에 저장 (선택 사항)
-        Cookie cookie = createCookie(tokenResponse.refreshToken()); // 리프레시 토큰을 쿠키로 생성
-        response.addCookie(cookie); // 응답에 쿠키 추가
+        // 리프레시 토큰을 쿠키에 저장
+        Cookie cookie = createCookie(tokenResponse.refreshToken());
+        // 응답에 쿠키 추가
+        response.addCookie(cookie);
 
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(tokenResponse);
+                .body(TokenResponse.builder()
+                        .accessToken(tokenResponse.accessToken())
+                        .build());
     }
 
     private Cookie createCookie(String refreshToken) {

@@ -8,7 +8,7 @@ import com.example.jwt_auth.auth.entity.RefreshToken;
 import com.example.jwt_auth.auth.entity.User;
 import com.example.jwt_auth.auth.repository.RefreshTokenRepository;
 import com.example.jwt_auth.auth.repository.UserRepository;
-import com.example.jwt_auth.common.jpa.JwtUtil;
+import com.example.jwt_auth.common.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -41,9 +41,8 @@ public class AuthService {
                 .role(request.role())
                 .build();
 
-        // 사용자 정보 저장
+        // 사용자 정보 저장(DB)
         User userPs = userRepository.save(newUser);
-
 
         return SignUpResponse.builder()
                 .userName(userPs.getUsername())
@@ -62,6 +61,10 @@ public class AuthService {
         if (!new BCryptPasswordEncoder().matches(request.password(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
+
+        // 주어진 사용자에 대한 리프레시 토큰이 DB에 존재하는지 확인하고, 존재할 경우 해당 리프레시 토큰 삭제(DB)
+        Optional<RefreshToken> existingRefreshToken = refreshTokenRepository.findByUser(user);
+        existingRefreshToken.ifPresent(refreshTokenRepository::delete);
 
         // 새로운 액세스 토큰 생성
         String accessToken = jwtUtil.createAccessToken(user);
@@ -100,14 +103,15 @@ public class AuthService {
                 .user(user)
                 .token(newRefreshToken)
                 .build();
-        
+
         // 리프레시 토큰 저장(DB)
         refreshTokenRepository.save(createdRefreshToken);
+        // 기존 리프레시 토큰 삭제(DB)
+        refreshTokenRepository.delete(existingRefreshToken);
 
         return TokenResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
                 .build();
     }
-
 }

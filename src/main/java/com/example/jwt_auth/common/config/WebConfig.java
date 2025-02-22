@@ -1,6 +1,6 @@
 package com.example.jwt_auth.common.config;
 
-import com.example.jwt_auth.common.jpa.JwtInterceptor;
+import com.example.jwt_auth.common.jwt.JwtInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
