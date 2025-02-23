@@ -1,4 +1,4 @@
-package com.example.jwt_auth.common.response;
+package com.example.jwt_auth.common.exception.response;
 
 import lombok.Builder;
 

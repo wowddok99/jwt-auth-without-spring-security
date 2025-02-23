@@ -1,6 +1,6 @@
 package com.example.jwt_auth.common.exception;
 
-import com.example.jwt_auth.common.response.ApiErrorResponse;
+import com.example.jwt_auth.common.exception.response.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

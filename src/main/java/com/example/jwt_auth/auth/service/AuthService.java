@@ -5,7 +5,9 @@ import com.example.jwt_auth.auth.dto.SignUpRequest;
 import com.example.jwt_auth.auth.dto.SignUpResponse;
 import com.example.jwt_auth.auth.dto.TokenResponse;
 import com.example.jwt_auth.auth.entity.RefreshToken;
+import com.example.jwt_auth.auth.entity.RefreshTokenHistory;
 import com.example.jwt_auth.auth.entity.User;
+import com.example.jwt_auth.auth.repository.RefreshTokenHistoryRepository;
 import com.example.jwt_auth.auth.repository.RefreshTokenRepository;
 import com.example.jwt_auth.auth.repository.UserRepository;
 import com.example.jwt_auth.common.jwt.JwtUtil;
@@ -15,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -24,6 +27,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenHistoryRepository refreshTokenHistoryRepository;
 
     @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
@@ -62,19 +66,27 @@ public class AuthService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        // 주어진 사용자에 대한 리프레시 토큰이 DB에 존재하는지 확인하고, 존재할 경우 해당 리프레시 토큰 삭제(DB)
-        Optional<RefreshToken> existingRefreshToken = refreshTokenRepository.findByUser(user);
-        existingRefreshToken.ifPresent(refreshTokenRepository::delete);
+        // 기존 리프레시 토큰이 존재하는 경우, 사용 이력을 저장하고 토큰을 삭제함
+        refreshTokenRepository.findByUser(user).ifPresent(existingToken -> {
+            RefreshTokenHistory history = RefreshTokenHistory.builder()
+                    .user(user)
+                    .token(existingToken.getToken())
+                    .usedAt(Instant.now())
+                    .expiryDate(existingToken.getExpiryDate())
+                    .build();
 
-        // 새로운 액세스 토큰 생성
+            refreshTokenHistoryRepository.save(history);
+            refreshTokenRepository.delete(existingToken);
+        });
+
+        // 새로운 액세스 토큰 및 리프레시 토큰 생성
         String accessToken = jwtUtil.createAccessToken(user);
-
-        // 새로운 리프레시 토큰 생성
         String refreshToken = jwtUtil.createRefreshToken(user);
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .user(user)
                 .token(refreshToken)
+                .expiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60)) // 7일 후 만료
                 .build();
 
         // 리프레시 토큰 저장(DB)
@@ -88,12 +100,33 @@ public class AuthService {
 
     @Transactional
     public TokenResponse reissueRefreshToken(String token) {
+        // 주어진 토큰에 대한 만료된 리프레시 토큰 기록을 조회하고, 존재하면 예외를 발생
+        refreshTokenHistoryRepository.findByToken(token)
+                .ifPresent(history -> {
+                    throw new IllegalArgumentException("사용된 리프레시 토큰이 재사용 되었습니다.");
+                });
+
         // 리프레시 토큰이 DB에 존재하는지 확인하고, 존재하지 않으면 예외를 발생
         RefreshToken existingRefreshToken = refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new NoSuchElementException("리프레시 토큰이 존재하지 않습니다."));
 
+        // 리프레시 토큰 만료 여부 체크
+        if (existingRefreshToken.isExpired()) {
+            throw new IllegalArgumentException("리프레시 토큰이 만료되었습니다.");
+        }
+
         // 사용자 정보 추출
         User user = existingRefreshToken.getUser();
+
+        // 기존 리프레시 토큰을 리프레시 토큰 히스토리에 저장
+        RefreshTokenHistory refreshTokenHistory = RefreshTokenHistory.builder()
+                .user(user)
+                .token(existingRefreshToken.getToken())
+                .usedAt(Instant.now())
+                .expiryDate(existingRefreshToken.getExpiryDate())
+                .build();
+
+        refreshTokenHistoryRepository.save(refreshTokenHistory);
 
         // 새로운 액세스 토큰 및 리프레시 토큰 생성
         String newAccessToken = jwtUtil.createAccessToken(user);
@@ -102,6 +135,7 @@ public class AuthService {
         RefreshToken createdRefreshToken = RefreshToken.builder()
                 .user(user)
                 .token(newRefreshToken)
+                .expiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60)) // 7일
                 .build();
 
         // 리프레시 토큰 저장(DB)
