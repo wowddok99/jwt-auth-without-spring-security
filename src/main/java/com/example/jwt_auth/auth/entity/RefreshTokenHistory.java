@@ -30,4 +30,11 @@ public class RefreshTokenHistory {
 
     @Column(nullable = false)
     private Instant expiryDate; // 기존 리프레시 토큰 만료 시간
+
+    @Column(nullable = false)
+    private int reuseCount = 0; // 재사용 횟수 (기본값: 0)
+
+    public void incrementReuseCount() {
+        this.reuseCount++;
+    }
 }

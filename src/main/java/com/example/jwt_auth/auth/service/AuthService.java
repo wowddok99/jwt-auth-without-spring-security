@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.PrimitiveIterator;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenHistoryRepository refreshTokenHistoryRepository;
+    private final TokenManagementService tokenManagementService;
 
     @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
@@ -100,11 +102,15 @@ public class AuthService {
 
     @Transactional
     public TokenResponse reissueRefreshToken(String token) {
-        // 주어진 토큰에 대한 만료된 리프레시 토큰 기록을 조회하고, 존재하면 예외를 발생
+        // 주어진 토큰이 만료된 리프레시 토큰 기록에 존재하는지 확인
         refreshTokenHistoryRepository.findByToken(token)
-                .ifPresent(history -> {
-                    throw new IllegalArgumentException("사용된 리프레시 토큰이 재사용 되었습니다.");
+                .ifPresent(refreshTokenHistory -> {
+                    // 리프레시 토큰 재사용 처리 (재사용 횟수 증가 및 해당 유저의 모든 리프레시 토큰 삭제)
+                    tokenManagementService.handleRefreshTokenReuse(refreshTokenHistory);
+
+                    throw new IllegalArgumentException("사용 또는 만료 처리된 리프레시 토큰이 재사용 되었습니다.");
                 });
+
 
         // 리프레시 토큰이 DB에 존재하는지 확인하고, 존재하지 않으면 예외를 발생
         RefreshToken existingRefreshToken = refreshTokenRepository.findByToken(token)
@@ -138,9 +144,8 @@ public class AuthService {
                 .expiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60)) // 7일
                 .build();
 
-        // 리프레시 토큰 저장(DB)
+        // 리프레시 토큰 저장 및 기존 리프레시 토큰 삭제(DB)
         refreshTokenRepository.save(createdRefreshToken);
-        // 기존 리프레시 토큰 삭제(DB)
         refreshTokenRepository.delete(existingRefreshToken);
 
         return TokenResponse.builder()

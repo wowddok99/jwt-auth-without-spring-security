@@ -23,7 +23,7 @@ public class RefreshToken {
     private String token;
 
     @Column(nullable = false)
-    private Instant expiryDate; // 만료 시간
+    private Instant expiryDate;
 
     public boolean isExpired() {
         return Instant.now().isAfter(this.expiryDate);
